@@ -1,84 +1,78 @@
 # Rasova: Phase 1 design
 
-Rasova is a restaurant POS and operations platform. This repository holds the Phase 1 design work, starting with:
+Rasova is a restaurant POS and operations platform. This repository holds the Phase 1 design system and an interactive prototype built from it.
 
-- **00 Foundations**: tokens, type, color, spacing, icons and reusable components
-- **01 Authentication**: an interactive prototype covering PA-01 to PA-06, with every error, empty, loading and success state
+The visual direction is **light first, black for structure, orange as the signature**. A full dark theme exists as a secondary variant built on the same tokens.
 
 Open `prototype/index.html` in a browser (or serve the folder with `python3 -m http.server`). Nothing needs to be installed or built.
 
-## What's in the prototype
+## What's covered (steps 1–4)
 
-The page has four tabs:
-
-| Tab | Contents |
+| Step | Contents |
 | --- | --- |
-| **Prototype** | Live, connected auth flows on a 1440×900 desktop or 1280×800 tablet canvas. Side controls switch the viewport and the network, set each outcome (for example "Invalid credentials" or "IdP declines"), simulate the administrator approving a device, and jump to any state. |
-| **State board** | Every state rendered side by side from the same code, plus a tablet set. Select a card to open it live. |
-| **Foundations** | Principles, color tokens and the orange-usage rules, type scale, operational numbers, spacing, radius, control heights, elevation, icons, and the 00–14 file map. |
-| **Components** | Buttons (each variant with its default, hover, focus, disabled and loading states), inputs, cards, status pills, sync card, banners, navigation, app shell, step indicator, password field, SSO button, OTP field, PIN dots and keypad. |
+| 1 · Foundations | Light and dark color tokens, the orange and black usage rules, type scale, spacing, grid, radius, elevation, icons, and every component with its states: buttons, inputs, dropdowns, tabs, tables, pagination, cards, KPI cards, badges, alerts, modals, drawers, avatars, tooltips, empty and loading states, and the Phase 1 status sets. |
+| 2 · Application shell | Expanded (248px) and collapsed (76px) sidebar with tooltips, navbar with breadcrumb, outlet selector, always-visible connection status, notifications, help and profile menu. |
+| 3 · Authentication | Login, forgot password, SSO, MFA, POS PIN, device binding and session/logout, with their error, loading and success states. |
+| 4 · First screens | POS billing (categories, item grid, order panel with KOT grouping, GST totals, payment) and the Home dashboard. |
 
-### Flows and how they connect
+Steps 5 and 6 (Tables & Orders, Kitchen, Menu, Online Orders, Reports, Admin, Devices, Onboarding, Support, Subscription) reuse this shell and component set. Their nav items currently open a placeholder.
+
+## The prototype
+
+The page has four tabs and a Light/Dark switch:
+
+- **Prototype**: the live product on a 1440×900 desktop or 1280×800 tablet canvas. Side controls switch the viewport and the network, set each outcome (invalid credentials, expired code, IdP declines and so on), simulate an administrator approving a device, trigger sync failures and conflicts, and jump to any state.
+- **State board**: every state side by side, plus a tablet set and a dark-theme set. Select a card to open it live.
+- **Foundations** and **Components**: the design system, rendered from the same code as the screens.
+
+Demo inputs: any work email and password, and POS PIN `2468`. Shortcuts in the shell: `N` starts a new order, `/` searches in POS, `[` collapses the sidebar. All names, outlets and figures are fictional sample data.
+
+### Flows
 
 ```
-Login ──► (MFA required) ──► MFA ──► Signing in ──► App shell
-  │  └──► (no MFA) ─────────────────► Signing in ──► App shell
-  ├──► Forgot password ──► Check your inbox ──► Back to sign in
-  ├──► Continue with SSO ──► Redirecting ──► Waiting for IdP ──► App shell
+Login ──► Additional verification required ──► MFA ──► Home
+  ├──► Forgot password ──► Check your inbox ──► Sign in
+  ├──► Continue with SSO ──► Redirecting ──► Waiting ──► Home
   └──► (offline) ──► Use PIN login
 
-PIN login ──► App shell (POS)
-  └──► Device not authorized ──► Secure this device ──► Pending ──► Paired ──► PIN login
-                                                              └──► Rejected ──► Request again
+POS PIN (pick staff, 4 digits, auto-submits) ──► POS
+  └──► Device not authorized ──► Secure this device ──► Pending ──► Paired ──► PIN
+                                                               └──► Rejected
 
-App shell ──► Account menu ──► Sign out (warns about unsynced transactions) ──► Signed out / PIN
-          └──► Session timeout ──► Session expired
+Shell ──► Profile menu ──► Sign out (warns about unsynced data) ──► Signed out / PIN
+      └──► Session timeout ──► Session expired
+POS ──► add items ──► Send KOT ──► Pay (Cash / UPI / Card / Split) ──► Payment received
 ```
 
-### State coverage
+## Design decisions
 
-| Requirement | States |
-| --- | --- |
-| PA-01 Login | Default, focused input, filled, loading, invalid credentials (with attempts left), account locked, service error, no connection |
-| Forgot password | Reset request, invalid email, unknown email, sending, service error, reset email sent with a resend cooldown |
-| PA-02 SSO login | Organization entry, invalid identifier, SSO not set up for the domain, redirecting, waiting for the IdP, sign-in not confirmed |
-| PA-03 MFA | Enter code (active digit in orange), code entered, verifying, incorrect code, expired code, too many attempts, choose another method, verified |
-| PA-04 PIN login | Enter PIN, entering, incorrect PIN, too many attempts (5-minute pause), PIN locked by an administrator, device not authorized, PIN accepted |
-| PA-05 Device binding | Device details, pending approval (pairing code and QR), paired, rejected with the administrator's note |
-| PA-06 Session / logout | Signing in, session expired, sign-out confirmation, sign out with unsynced data, signed out |
-| System states (shell) | Online, offline, syncing, sync success, sync failure, conflict, permission denied |
-
-Demo inputs: any work email and password; demo POS PIN `2468`. All names, outlets and figures are fictional sample data.
-
-## Visual language
-
-- **Dark first.** The canvas is black (`#080808`, `#0D0D0D`, `#111111`) and surfaces step up through charcoal (`#151515` to `#202020`) with 1px hairlines (`#292929`, `#333333`). There is no light theme.
-- **Orange as identity.** `#FF6A00` marks the primary action, active navigation, focus, selection, progress and the headline number. It covers about 3% of a screen. Text on orange is black (7.6:1), never white.
-- **Semantic color is separate.** Success, warning, error and info never reuse orange, and every state also has its own icon or shape (a hollow dot for offline, a spinner for syncing, an icon for errors), so color is never the only signal.
-- **Type.** Manrope for headings and operational numbers (800 weight, tabular figures), Inter for interface text, JetBrains Mono for codes, IDs and KOT numbers.
-- **Shape.** Radius 10 for controls, 12 for cards, 14 for panels. Shadows stay restrained, and an orange glow appears only on focus, active navigation, the primary CTA and selection.
-- **Touch.** POS and tablet controls are at least 56px tall and keypad keys are 72px (84px on tablet). The PIN screen also takes physical keyboard input for Windows terminals.
-- **Tablet is its own layout.** At 1280×800 the brand panel narrows, inputs and buttons grow to touch height, and the sidebar becomes a labelled icon rail.
+- **Orange is about 2% of a screen.** It marks the primary action, active navigation (soft orange fill, orange icon, and an orange marker on the sidebar edge), focus, selection, progress, new-item counts, and metrics that need action, such as pending approvals.
+- **Black does the heavy lifting.** It's used for text, icons, and secondary actions that still need weight (New order, Send KOT, Approve), plus tooltips and the selected category chip.
+- **Text on orange is black.** White on `#FF6A00` is 2.9:1, which fails contrast. Black is 7.2:1. When orange has to be text on light backgrounds, it uses `--orange-ink` (`#B34A00`, 5.4:1).
+- **Status never relies on color alone.** Every status badge carries a dot or an icon. Offline uses a hollow ring, syncing uses a spinner, and errors use an icon.
+- **Connection status is always visible**, in both the navbar and the sidebar. A slim alert bar appears only when sync fails or there's a conflict.
+- **POS is denser than the dashboard.** The sidebar collapses automatically in POS. Sent items are locked, because voiding them needs approval. Items carry the Indian veg and non-veg marks, and totals show CGST and SGST at 2.5% each, rounded off.
+- **Tablet is its own layout.** At 1280×800 the sidebar becomes a rail, POS categories become chips, and controls grow to 56px touch targets with 80px keypad keys.
 
 ## Files
 
 ```
 prototype/
-  index.html       page shell: tabs, controls, stage
-  tokens.css       00 Foundations: every color, type, space, radius, size and shadow token
-  components.css   reusable rv-* components and their states
-  screens.css      auth layouts (web split, POS console), app shell, tablet adaptations
+  index.html       page shell: tabs, theme switch, controls, stage
+  tokens.css       light tokens (primary) and dark tokens (variant)
+  components.css   rv-* components and their states
+  screens.css      auth, POS terminal, shell, Home, POS billing, tablet rules
   studio.css       the prototype page around the screens
-  icons.js         Lucide icon paths (ISC), inlined so nothing loads at runtime
+  icons.js         Lucide icon paths (ISC), inlined
   screens.js       component helpers and one render function per screen
   studio.js        state machine, interactions, controls, state board, sheets
 ```
 
-Every screen is a pure function of one state object, so the live prototype, the state board and the component sheet always match. These tokens and component names (`rv-btn--primary`, `rv-input.is-error` and so on) are meant to map one-to-one onto Figma variables and components.
+Every screen is a pure function of one state object, so the prototype, the state board and the design-system sheets always match. Token and component names (`--orange-soft`, `rv-btn--black`, `nav-item.is-active`) are meant to map one-to-one onto Figma variables and components.
 
-## Assumptions
+## Assumptions to confirm
 
-- The Phase 1 UX Screen Inventory wasn't included with this repository, so the PA-01 to PA-06 IDs, terminology and states follow the written brief.
-- Lockout rules (3 password attempts, 3 MFA attempts, 3 PIN attempts, 30-minute account lock, 5-minute PIN pause, 30-minute reset link, 10-minute pairing code) are placeholders until product and security confirm them.
-- SSO uses generic language with no named providers.
-- The "unknown email" state on password reset follows the brief. Production may prefer a neutral message so the form can't be used to find out which emails have accounts.
+- The Phase 1 UX Screen Inventory wasn't in the repository. Screen IDs (PA-01 to PA-06), navigation and states follow the written brief.
+- Lockout and timer values are placeholders: 3 attempts each for password, MFA and PIN, a 30-minute account lock, a 5-minute PIN pause, a 30-minute reset link and a 10-minute pairing code.
+- The "unknown email" state on password reset reveals whether an account exists. Production may prefer a neutral message.
+- PIN login auto-submits on the fourth digit, for speed.
