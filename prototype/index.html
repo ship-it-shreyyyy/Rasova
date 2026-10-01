@@ -1,0 +1,48 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rasova Authentication</title>
+<meta name="description" content="Rasova Phase 1: design foundations, components and the interactive authentication prototype (PA-01 to PA-06).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Manrope:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="screens.css">
+<link rel="stylesheet" href="studio.css">
+
+<header class="studio-top">
+  <span class="rv-logo rv-logo--sm"><svg class="rv-logo__mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#FF6A00"/><path d="M11 24V8.5h6.4a4.85 4.85 0 0 1 0 9.7H11" fill="none" stroke="#0A0A0A" stroke-width="3.2" stroke-linejoin="round"/><path d="M16.6 18.2 22.4 24" stroke="#0A0A0A" stroke-width="3.2" stroke-linecap="round"/><circle cx="24" cy="9.5" r="1.9" fill="#0A0A0A"/></svg><span class="rv-logo__word">RASOVA</span></span>
+  <div class="studio-top__ctx"><b>Phase 1 · Iteration 1</b>00 Foundations · 01 Authentication</div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" class="tab" role="tab" data-tab="prototype" aria-selected="true"><span class="n">01</span>Prototype</button>
+    <button type="button" class="tab" role="tab" data-tab="states" aria-selected="false"><span class="n">14</span>State board</button>
+    <button type="button" class="tab" role="tab" data-tab="foundations" aria-selected="false"><span class="n">00</span>Foundations</button>
+    <button type="button" class="tab" role="tab" data-tab="components" aria-selected="false"><span class="n">00</span>Components</button>
+  </nav>
+</header>
+
+<main>
+  <section class="view" id="view-prototype" aria-label="Authentication prototype">
+    <div class="proto">
+      <aside class="controls" id="controls" aria-label="Prototype controls"></aside>
+      <div class="stage-wrap">
+        <div class="stage-meta"><b id="stage-title">PA-01 Login</b><span id="stage-state"></span><span class="sp" id="stage-size"></span></div>
+        <div class="stage" id="stage"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-states" hidden aria-label="State board">
+    <div class="board-intro"><h1>Authentication state board</h1><p>Every PA-01 to PA-06 state, plus the shell's system states, rendered from the same code as the prototype. Select any state to open it live.</p></div>
+    <div id="board"></div>
+  </section>
+
+  <section class="view" id="view-foundations" hidden aria-label="Foundations"><div id="foundations"></div></section>
+  <section class="view" id="view-components" hidden aria-label="Components"><div id="components"></div></section>
+</main>
+
+<footer class="studio-foot"><span>Rasova Phase 1 design · Sample data only, all names and figures are fictional.</span><span>Icons: Lucide (ISC)</span></footer>
+
+<script src="icons.js"></script>
+<script src="screens.js"></script>
+<script src="studio.js"></script>
