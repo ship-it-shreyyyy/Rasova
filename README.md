@@ -44,6 +44,23 @@ Shell ──► Profile menu ──► Sign out (warns about unsynced data) ─�
 POS ──► add items ──► Send KOT ──► Pay (Cash / UPI / Card / Split) ──► Payment received
 ```
 
+## Figma file
+
+**[Rasova — Phase 1 Design System](https://www.figma.com/design/KglmWssY1qGyWVFH3NBywM)** mirrors this prototype as editable, token-bound design:
+
+| Page | Contents |
+| --- | --- |
+| Cover | Title over the sign-in environment |
+| 00 — Foundations | Color tokens in Light and Dark side by side (every swatch bound to a variable), color proportion, type scale, spacing, radius, elevation and glass, motion tokens |
+| 00 — Components | 54 Lucide icon components; Button, Button XL, Input, Badge, Connection status, Avatar, Logo, Nav item, OTP cell, PIN key, Floating card, KPI card, POS item card, Inline note; Sidebar (expanded, collapsed), Navbar, Auth environment (desktop, tablet, mobile), Auth top bar, Auth footer |
+| 01 — Authentication | Login (7 states), forgot password, SSO, MFA (3 states), POS PIN, device binding, plus tablet, mobile and dark variants. Prototype flows: Sign in, Forgot password, Device binding → PIN |
+| 02 — Shell & POS | Home dashboard with the expanded glass sidebar, POS billing with the collapsed sidebar, and Home in dark mode |
+
+- **Variables:** Primitives (59 colors), Color (45 semantic tokens with Light and Dark modes, aliased to primitives) and Layout (spacing, radius, sizes, blur). Each has a scope and its CSS variable as Web code syntax.
+- **Styles:** 21 text styles and 9 effect styles, including glass background blur.
+- **Built from instances:** screens use component instances throughout, so changing a token or component updates every screen.
+- **Dark frames:** use the Dark mode of the Color collection instead of separate colors.
+
 ## Sign-in experience
 
 The form is short: work email, password, forgot password, Sign in, SSO, and a note on how to get access. The environment around it carries the personality:
