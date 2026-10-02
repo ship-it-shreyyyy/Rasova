@@ -17,20 +17,23 @@
   height: var(--h-md); padding: 0 16px; border: 1px solid transparent; border-radius: var(--r-md);
   font: 600 var(--fs-14)/1 var(--font-ui); letter-spacing: -0.005em; white-space: nowrap;
   color: var(--ink); background: none; cursor: pointer; text-decoration: none;
-  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-med), transform var(--t-med) var(--ease);
   -webkit-tap-highlight-color: transparent;
 }
-.rv-btn .rv-icon { width: 16px; height: 16px; }
+.rv-btn .rv-icon { width: 16px; height: 16px; transition: transform var(--t-slow) var(--ease-out); }
+.rv-btn .arr { display: inline-flex; margin-left: 8px; }
+.rv-btn:hover:not(:disabled) .arr .rv-icon, .rv-btn.is-hover .arr .rv-icon { transform: translateX(5px); }
 .rv-btn:focus-visible, .rv-btn.is-focus { outline: none; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--orange); }
 .rv-btn:disabled { cursor: not-allowed; }
 
 .rv-btn--primary { background: var(--orange); color: var(--on-orange); }
-.rv-btn--primary:hover:not(:disabled), .rv-btn--primary.is-hover { background: var(--orange-hover); }
+.rv-btn--primary:hover:not(:disabled), .rv-btn--primary.is-hover { background: var(--orange-hover); transform: translateY(-1px); box-shadow: 0 10px 24px -10px rgba(255, 106, 0, 0.55); }
+.rv-btn--primary:active:not(:disabled) { transform: none; box-shadow: none; }
 .rv-btn--primary:disabled { background: var(--surface-3); color: var(--ink-3); }
 .rv-btn--primary.is-loading { background: var(--orange); color: var(--on-orange); opacity: 0.85; cursor: progress; }
 
 .rv-btn--secondary { background: var(--surface); border-color: var(--border-strong); color: var(--ink); box-shadow: var(--shadow-xs); }
-.rv-btn--secondary:hover:not(:disabled), .rv-btn--secondary.is-hover { border-color: var(--ink); }
+.rv-btn--secondary:hover:not(:disabled), .rv-btn--secondary.is-hover { border-color: var(--ink-3); background: var(--surface-2); }
 .rv-btn--secondary:disabled { color: var(--ink-3); border-color: var(--border); box-shadow: none; }
 
 .rv-btn--black { background: var(--black); color: var(--ink-inverse); }
@@ -49,20 +52,23 @@
 .rv-btn--icon:hover:not(:disabled), .rv-btn--icon.is-hover { background: var(--surface-2); color: var(--ink); }
 .rv-btn--icon .rv-icon { width: 18px; height: 18px; }
 
-.rv-btn--link { height: auto; padding: 0; border-radius: var(--r-xs); color: var(--orange-ink); font-weight: 600; font-size: var(--fs-13); }
-.rv-btn--link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rv-btn--link { height: auto; padding: 0 0 1px; border-radius: 0; color: var(--orange-ink); font-weight: 600; font-size: var(--fs-13);
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size var(--t-slow) var(--ease-out), opacity var(--t-fast); }
+.rv-btn--link:hover { background-size: 100% 1px; }
 .rv-btn--text { height: auto; padding: 0; border-radius: var(--r-xs); color: var(--ink-2); font-weight: 500; font-size: var(--fs-13); }
 .rv-btn--text:hover { color: var(--ink); }
 
 .rv-btn--sm { height: var(--h-sm); padding: 0 12px; font-size: var(--fs-13); }
 .rv-btn--lg { height: var(--h-lg); padding: 0 18px; font-size: var(--fs-15); }
 .rv-btn--touch { height: var(--h-touch); padding: 0 20px; font-size: 16px; border-radius: var(--r-lg); }
+.rv-btn--xl { height: 54px; padding: 0 20px; font-size: var(--fs-15); border-radius: 12px; }
 .rv-btn--block { width: 100%; }
 
 /* ---------- Inputs ---------- */
 .rv-field { display: grid; gap: 6px; }
 .rv-field__top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.rv-label { font: 500 var(--fs-13)/1.2 var(--font-ui); color: var(--ink); }
+.rv-label { font: 500 var(--fs-13)/1.2 var(--font-ui); color: var(--ink); transition: color var(--t-med), transform var(--t-med) var(--ease-out); }
+.rv-field:focus-within > .rv-field__top > .rv-label { color: var(--orange-ink); transform: translateX(2px); }
 .rv-input {
   display: flex; align-items: center; gap: 10px; height: var(--h-lg); padding: 0 12px;
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md);
@@ -85,6 +91,10 @@
 .rv-input.is-readonly { background: var(--surface-2); }
 .rv-input--sm { height: 36px; }
 .rv-input--touch { height: var(--h-touch); }
+.rv-input--xl { height: 54px; padding: 0 14px 0 16px; border-radius: 12px; border-color: var(--border); background: var(--glass-strong); transition: border-color var(--t-med), box-shadow var(--t-med), background var(--t-med); }
+.rv-input--xl:hover { border-color: var(--border-strong); }
+.rv-input--xl:focus-within, .rv-input--xl.is-focus { background: var(--surface); border-color: var(--orange); box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.10); }
+.rv-input--xl.is-error { border-color: var(--error); }
 .rv-input--mono input, .rv-input--mono .rv-input__value { font-family: var(--font-mono); font-size: 13px; }
 .rv-input__action { display: grid; place-items: center; width: 30px; height: 30px; margin-right: -6px; border: 0; border-radius: var(--r-sm); background: none; color: var(--ink-3); cursor: pointer; }
 .rv-input__action:hover { color: var(--ink); background: var(--surface-2); }
@@ -97,7 +107,8 @@
 /* Dropdown trigger + menu */
 .rv-select { justify-content: space-between; cursor: pointer; }
 .rv-select > .rv-icon:last-child { color: var(--ink-3); }
-.rv-menu { min-width: 220px; padding: 6px; border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow-lg); display: grid; gap: 1px; animation: rv-in var(--t-med) var(--ease) both; }
+.rv-menu { min-width: 220px; padding: 6px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass-menu); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5); backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-edge); display: grid; gap: 1px; animation: rv-pop var(--t-slow) var(--ease-out) both; transform-origin: top left; }
 .rv-menu__label { padding: 8px 10px 6px; font: 600 var(--fs-11)/1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .rv-menu__item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 6px 10px; border: 0; border-radius: var(--r-sm); background: none; color: var(--ink); font: 500 var(--fs-13)/1.3 var(--font-ui); text-align: left; cursor: pointer; }
 .rv-menu__item .rv-icon { width: 16px; height: 16px; color: var(--ink-2); }
@@ -230,7 +241,7 @@
 .rv-drawer__foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ---------- Tooltip ---------- */
-.rv-tooltip { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 10px; border-radius: var(--r-sm); background: var(--black); color: var(--ink-inverse);
+.rv-tooltip { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 10px; border-radius: var(--r-md); background: var(--glass-dark); color: var(--glass-dark-ink); border: 1px solid var(--glass-dark-border); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
   font: 500 var(--fs-12)/1 var(--font-ui); white-space: nowrap; box-shadow: var(--shadow-md); }
 .rv-tooltip kbd { font: 500 11px/1 var(--font-mono); opacity: 0.65; }
 
@@ -305,6 +316,36 @@
 [data-rv-theme="dark"] .rv-food.is-nonveg { border-color: #E06A4A; }
 [data-rv-theme="dark"] .rv-food.is-nonveg::after { border-bottom-color: #E06A4A; }
 
+/* ---------- Glass ---------- */
+.rv-glass { background: var(--glass); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5); backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-edge); }
+.rv-glass--strong { background: var(--glass-strong); }
+.rv-glass--dark { background: var(--glass-dark); border-color: var(--glass-dark-border); color: var(--glass-dark-ink); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25); }
+
+/* ---------- Motion primitives ----------
+   anim-in    fade + rise, delayed by --d (page-load stagger)
+   anim-float slow vertical drift, --dur and --delay per element
+   anim-pop   menus and popovers
+   anim-swap  content change inside a persistent container          */
+@keyframes rv-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes rv-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rv-float { 0%, 100% { transform: translateY(calc(var(--float-dist) * -1)); } 50% { transform: translateY(var(--float-dist)); } }
+@keyframes rv-pop { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes rv-swap { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes rv-swap-back { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+@keyframes rv-exit { to { opacity: 0; transform: translateY(-8px) scale(0.985); } }
+@keyframes rv-drift { 0% { transform: translate(0, 0); } 50% { transform: translate(28px, -18px); } 100% { transform: translate(0, 0); } }
+@keyframes rv-breathe { 0%, 100% { opacity: 0.55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.35); } }
+.anim-in { animation: rv-fade-up var(--t-enter) var(--ease-out) both; animation-delay: var(--d, 0ms); }
+.anim-float { animation: rv-float var(--dur, 5s) var(--ease-float) infinite; animation-delay: var(--delay, 0s); }
+.anim-pop { animation: rv-pop var(--t-slow) var(--ease-out) both; }
+.anim-swap { animation: rv-swap 280ms var(--ease-out) both; }
+.anim-swap-back { animation: rv-swap-back 280ms var(--ease-out) both; }
+.anim-exit { animation: rv-exit 260ms var(--ease) both; }
+[inert] *, [inert] { animation: none !important; transition: none !important; }
+
 @media (prefers-reduced-motion: reduce) {
+  .anim-float, .anim-drift { animation: none !important; }
+  .anim-in, .anim-swap, .anim-swap-back { animation-name: rv-fade; }
   .rv-spin, .rv-skel, .rv-progress.is-indeterminate > i, .rv-otp.is-error, .rv-pin-dots.is-error { animation: none; }
 }

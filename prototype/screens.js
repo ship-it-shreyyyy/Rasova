@@ -112,20 +112,88 @@
     return `<svg viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges" role="img" aria-label="Pairing QR code"><path d="${d}" fill="#171717"/>${finder(0, 0)}${finder(N - 7, 0)}${finder(0, N - 7)}</svg>`;
   }
 
-  /* ---------- Authentication (centered, minimal) ---------- */
+  /* ---------- Authentication environment ----------
+     One persistent environment (grid, light, orbit, floating cards) with a
+     glass panel in the middle. Screens only swap the panel contents, so the
+     ambient motion never restarts between login, MFA, reset and SSO. */
   const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(e).trim());
   const maskEmail = (e) => { const [u, d] = String(e).split("@"); return d ? `${u[0]}${"•".repeat(5)}@${d}` : e; };
   const domainOf = (id) => (String(id).includes("@") ? String(id).split("@")[1] : String(id));
   const orgFrom = (id) => { const v = String(id).toLowerCase(); if (v.includes("spicetrail") || v.includes("spice-trail")) return ORG; const b = v.includes("@") ? v.split("@")[1].split(".")[0] : v; return b.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); };
+  const reduced = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (_) { return false; } };
 
-  function authLayout(S, body) {
-    return `<div class="auth">
-      <header class="auth__top">${logo({ desc: true })}<div style="display:flex;align-items:center;gap:16px">${S.network === "offline" ? conn("offline") : ""}${btn({ v: "text", label: "Need help?", act: "help" })}</div></header>
-      <main class="auth__main">${body}</main>
-      <footer class="auth__foot"><span>© 2026 Rasova · v1.0.4</span><nav>${btn({ v: "text", label: "Privacy" })}${btn({ v: "text", label: "Terms" })}${btn({ v: "text", label: "System status" })}</nav></footer>
-    </div>`;
+  // Orbit: three rings around the panel; orange nodes travel slowly (orders, tables, kitchen).
+  function orbit() {
+    const cx = 720, cy = 462, still = STATIC || reduced();
+    const ring = (rx, ry) => `M ${cx} ${cy - ry} A ${rx} ${ry} 0 1 1 ${cx} ${cy + ry} A ${rx} ${ry} 0 1 1 ${cx} ${cy - ry}`;
+    const at = (rx, ry, t) => [cx + rx * Math.sin(2 * Math.PI * t), cy - ry * Math.cos(2 * Math.PI * t)];
+    const node = (rx, ry, dur, t, o = {}) => {
+      const [x, y] = at(rx, ry, t);
+      const body = `<circle r="${o.r || 4}" fill="${o.muted ? "var(--ink-3)" : "#FF6A00"}"/>${o.muted ? "" : `<circle r="11" fill="#FF6A00" opacity="0.14" class="orbit__halo"/>`}${o.label ? `<text x="10" y="-8" class="orbit__label">${o.label}</text>` : ""}`;
+      return still ? `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${body}</g>`
+        : `<g>${body}<animateMotion dur="${dur}s" begin="-${(t * dur).toFixed(1)}s" repeatCount="indefinite" path="${ring(rx, ry)}"/></g>`;
+    };
+    return `<svg class="env__orbit" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><radialGradient id="rvCore" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FF6A00" stop-opacity="0.10"/><stop offset="1" stop-color="#FF6A00" stop-opacity="0"/></radialGradient></defs>
+      <circle cx="${cx}" cy="${cy}" r="300" fill="url(#rvCore)"/>
+      <g transform="rotate(-9 ${cx} ${cy})">
+        <path d="${ring(780, 470)}" fill="none" stroke="var(--orbit-muted)" stroke-width="1"/>
+        <path d="${ring(560, 352)}" fill="none" stroke="var(--orbit-muted)" stroke-width="1" stroke-dasharray="2 6"/>
+        ${node(780, 470, 120, 0.62, { muted: true, r: 3 })}${node(560, 352, 80, 0.12, { label: "ORDER" })}${node(560, 352, 80, 0.55)}
+      </g>
+      <path class="orbit__main" d="${ring(372, 372)}" fill="none" stroke="var(--orbit)" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round"/>
+      ${node(372, 372, 54, 0.08, { label: "KOT" })}${node(372, 372, 54, 0.4)}${node(372, 372, 54, 0.78, { label: "T12" })}
+    </svg>`;
   }
-  const back = (go = "login/default", label = "Back to sign in") => btn({ v: "text", label, icon: "arrow-left", go, cls: "auth__back" });
+
+  function spark() {
+    const pts = [6, 9, 7, 12, 10, 15, 13, 18].map((v, i) => `${i * 10},${22 - v}`).join(" ");
+    return `<svg class="fcard__spark" viewBox="0 0 70 22" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="#FF6A00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="4" r="2.4" fill="#FF6A00"/></svg>`;
+  }
+  // Floating operational fragments. Position in %, parallax depth, float timing.
+  const FLOAT_CARDS = [
+    { cls: "c-table", x: 14.5, y: 22, depth: 0.9, dur: 5.5, delay: 0, body: `<div class="fcard__k"><i class="fdot"></i>Table</div><div class="fcard__v">12</div><div class="fcard__s">4 guests · 38 min</div>` },
+    { cls: "c-order", x: 74, y: 15, depth: 0.6, dur: 4.5, delay: -1.2, body: `<div class="fcard__k">Order #184</div><div class="fcard__v">₹2,840</div><div class="fcard__bar"><i style="width:68%"></i></div><div class="fcard__s">Dine-in · 6 items</div>` },
+    { cls: "c-kot", x: 78.5, y: 57, depth: 1.1, dur: 6, delay: -2.4, body: `<div class="fcard__k">KOT #1042</div><div class="fcard__v fcard__v--ok">${ic("circle-check")}Ready</div><div class="fcard__s">Tandoor · Table 07</div>` },
+    { cls: "c-online", x: 9.5, y: 61, depth: 0.7, dur: 5, delay: -0.8, body: `<div class="fcard__k">Online</div><div class="fcard__row"><span class="fcard__v">14</span>${spark()}</div><div class="fcard__s">orders this hour</div>` },
+    { cls: "c-sync is-dark", x: 70, y: 84, depth: 0.5, dur: 6.5, delay: -3, body: `<i class="fdot fdot--ok"></i>Synced<span>3 outlets · just now</span>` },
+  ];
+  function floatCards(S) {
+    return FLOAT_CARDS.map((c, i) => `<div class="fwrap ${c.cls}" style="left:${c.x}%;top:${c.y}%;--depth:${c.depth};${S.anim === "intro" ? `--d:${320 + i * 90}ms` : ""}">
+      <div class="fcard ${c.cls.includes("is-dark") ? "rv-glass rv-glass--dark" : "rv-glass"} anim-float" style="--dur:${c.dur}s;--delay:${c.delay}s">${c.body}</div></div>`).join("");
+  }
+
+  function env(S, kind) {
+    return `<div class="env" aria-hidden="true"><div class="env__grid"></div><div class="env__atmos env__atmos--a anim-drift"></div><div class="env__atmos env__atmos--b anim-drift"></div>${orbit()}${kind === "web" ? floatCards(S) : ""}</div>`;
+  }
+
+  // Shell for every pre-app screen. kind: "web" (email, SSO, MFA) or "terminal" (POS PIN, device binding).
+  function authLayout(S, panel, o = {}) {
+    const kind = o.kind || "web";
+    const offline = S.network === "offline";
+    const intro = S.anim === "intro" ? " is-intro" : "";
+    const swap = S.anim === "swap" ? " anim-swap" : S.anim === "swap-back" ? " anim-swap-back" : "";
+    const top = kind === "web"
+      ? `<header class="auth__top">
+          <div class="auth__brand">${logo()}<span class="auth__desc">Restaurant operating system</span></div>
+          <span class="auth__meta ${offline ? "is-offline" : ""}"><i class="rv-dot"></i>${offline ? "Offline · no connection" : "Secure connection"}</span>
+          <div class="auth__top-right"><span class="auth__meta auth__meta--plain">Rasova OS / 1.0</span>${btn({ v: "text", label: "Need help?", act: "help" })}</div>
+        </header>`
+      : `<header class="auth__top auth__top--term">
+          <div class="auth__brand">${logo()}</div>
+          <span class="auth__ctx">${ic("monitor")}<b>${esc(o.ctx || TERMINAL)}</b><span>Downtown Delhi</span></span>
+          <div class="auth__top-right"><span class="auth__clock">7:42<small>PM</small></span>${conn(offline ? "offline" : "online")}</div>
+        </header>`;
+    return `<div class="auth auth--${kind}" data-kind="${kind}">${env(S, kind)}
+      <div class="auth__ui${intro}">
+        ${top}
+        <main class="auth__center"><div class="auth__panel rv-glass ${o.wide ? "auth__panel--wide" : ""} ${o.panelCls || ""}${swap}">${panel}</div></main>
+        <footer class="auth__foot"><span>© 2026 Rasova</span><nav>${["Privacy", "Terms", "Status"].map((l) => `<button type="button" class="auth__foot-link">${l}</button>`).join("")}</nav></footer>
+      </div></div>`;
+  }
+  const back = (go = "login/default", label = "Back to sign in") => btn({ v: "text", label, icon: "arrow-left", go, cls: "auth__back", attrs: 'data-dir="back"' });
+  const xlField = (o) => field(Object.assign({ size: "xl" }, o));
+  const cta = (o) => btn(Object.assign({ v: "primary", size: "xl", block: true }, o, o.arrow === false ? {} : { label: o.loading ? o.label : `${o.label}<span class="arr">${ic("arrow-right")}</span>` }));
 
   function loginScreen(S) {
     const v = S.v, locked = v === "locked", busy = v === "loading" || v === "mfa-required";
@@ -134,7 +202,7 @@
     const notes = {
       invalid: note("error", "circle-alert", "Email or password is incorrect.", `${S.attemptsLeft} ${S.attemptsLeft === 1 ? "attempt" : "attempts"} left before the account is locked.`),
       locked: note("error", "lock-keyhole", "Your account has been temporarily locked.", "Try again in 30 minutes, or ask your administrator to unlock it.", btn({ v: "link", label: "Reset password", go: "forgot/default" })),
-      "mfa-required": note("orange", "shield-check", "Additional verification required.", "Opening verification…"),
+      "mfa-required": note("orange", "shield-check", "Additional verification required.", "Taking you to verification…"),
       "service-error": note("error", "cloud-off", "We couldn't reach Rasova.", "Nothing was submitted. Try again in a moment.", btn({ v: "link", label: "Try again", act: "submitLogin" })),
       offline: note("warning", "wifi-off", "You're offline.", "Email sign-in needs a connection. Set-up POS terminals can use PIN login.", btn({ v: "link", label: "Use PIN login", go: "pin/default" })),
       "session-expired": note("info", "timer", "Your session expired.", "Sign in again to continue where you left off."),
@@ -142,17 +210,13 @@
     };
     const eye = `<button type="button" class="rv-input__action" data-act="togglePw" aria-label="${S.showPw ? "Hide password" : "Show password"}" aria-pressed="${S.showPw}"${locked ? " disabled" : ""}>${ic(S.showPw ? "eye-off" : "eye")}</button>`;
     return authLayout(S, `<form class="auth__box" data-form="login" novalidate>
-      <div class="auth__head"><h1>Welcome back</h1><p>Sign in to your Rasova workspace.</p></div>
+      <div class="auth__head"><h1>Welcome back.</h1><p>Sign in to your Rasova workspace.</p></div>
       ${notes[v] || ""}
-      <div class="auth__fields">
-        ${field({ id: "email", label: "Work email", type: "email", value: S.email, ph: "name@company.com", autocomplete: "username", state: v === "focus" ? "focus" : v === "invalid" ? "error" : "", error: emailErr, disabled: locked, readonly: busy, autofocus: v !== "invalid" })}
-        ${field({ id: "password", label: "Password", type: S.showPw ? "text" : "password", value: S.password, ph: "Enter your password", autocomplete: "current-password", state: v === "invalid" ? "error" : "", disabled: locked, readonly: busy, action: eye, autofocus: v === "invalid", aside: btn({ v: "link", label: "Forgot password?", go: "forgot/default" }) })}
-      </div>
-      <div class="auth__actions">
-        ${btn({ v: "primary", size: "lg", block: true, type: "submit", label: "Sign in", iconR: "arrow-right", disabled: !can, loading: busy ? "Signing in…" : false, cta: true })}
-        <div class="rv-divider">OR</div>
-        ${btn({ v: "secondary", size: "lg", block: true, label: "Continue with SSO", icon: "building-2", go: "sso/default", disabled: busy })}
-      </div>
+      ${xlField({ id: "email", label: "Work email", type: "email", value: S.email, ph: "name@company.com", autocomplete: "username", state: v === "focus" ? "focus" : v === "invalid" ? "error" : "", error: emailErr, disabled: locked, readonly: busy, autofocus: v !== "invalid" })}
+      ${xlField({ id: "password", label: "Password", type: S.showPw ? "text" : "password", value: S.password, ph: "Enter your password", autocomplete: "current-password", state: v === "invalid" ? "error" : "", disabled: locked, readonly: busy, action: eye, autofocus: v === "invalid", aside: btn({ v: "link", label: "Forgot password?", go: "forgot/default" }) })}
+      ${cta({ type: "submit", label: "Sign in", disabled: !can, loading: busy ? "Signing in…" : false, cta: true })}
+      <div class="rv-divider">OR</div>
+      ${btn({ v: "glass", size: "xl", block: true, label: "Continue with SSO", icon: "building-2", go: "sso/default", disabled: busy })}
       <p class="auth__aside">Need access?<b>Contact your administrator.</b></p>
     </form>`);
   }
@@ -162,21 +226,19 @@
     if (v === "sent") {
       const cd = remaining(S, "resend");
       return authLayout(S, `<div class="auth__box">
-        <div class="auth__head">${back()}<div class="auth__mark is-orange">${ic("mail")}</div><h1>Check your inbox</h1><p>Password reset instructions have been sent to your registered email.</p></div>
+        <div class="auth__head">${back()}<div class="auth__mark is-orange">${ic("mail")}</div><h1>Check your inbox.</h1><p>Password reset instructions have been sent to your registered email.</p></div>
         <div><span class="auth__chip">${ic("mail")}${esc(maskEmail(S.forgotEmail))}</span></div>
-        <div class="auth__actions">
-          ${btn({ v: "primary", size: "lg", block: true, label: "Back to sign in", go: "login/default" })}
-          ${cd > 0 ? `<button type="button" class="rv-btn rv-btn--secondary rv-btn--lg rv-btn--block" disabled>Resend email in ${timer(S, "resend")}</button>` : btn({ v: "secondary", size: "lg", block: true, label: "Resend email", act: "resendReset" })}
-        </div>
-        <p class="auth__aside" style="color:var(--ink-3)">The link expires in 30 minutes. Check spam if it hasn't arrived.</p>
+        ${cta({ label: "Back to sign in", go: "login/default", attrs: 'data-dir="back"' })}
+        ${cd > 0 ? `<button type="button" class="rv-btn rv-btn--glass rv-btn--xl rv-btn--block" disabled>Resend email in ${timer(S, "resend")}</button>` : btn({ v: "glass", size: "xl", block: true, label: "Resend email", act: "resendReset" })}
+        <p class="auth__aside auth__aside--muted">The link expires in 30 minutes. Check spam if it hasn't arrived.</p>
       </div>`);
     }
     const errs = { "invalid-email": "Enter a work email, like name@company.com.", unknown: `No Rasova account uses ${esc(S.forgotEmail)}. Check the spelling or ask your administrator.` };
     return authLayout(S, `<form class="auth__box" data-form="forgot" novalidate>
-      <div class="auth__head">${back()}<h1>Reset your password</h1><p>Enter your work email and we'll send you a password reset link.</p></div>
+      <div class="auth__head">${back()}<h1>Reset your password.</h1><p>Enter your work email and we'll send you a password reset link.</p></div>
       ${v === "service-error" ? note("error", "cloud-off", "We couldn't send the email.", "Your password hasn't changed. Try again in a moment.", btn({ v: "link", label: "Try again", act: "submitForgot" })) : ""}
-      ${field({ id: "forgotEmail", label: "Work email", type: "email", value: S.forgotEmail, ph: "name@company.com", autocomplete: "username", error: errs[v], readonly: v === "loading", autofocus: true })}
-      ${btn({ v: "primary", size: "lg", block: true, type: "submit", label: "Send reset link", disabled: !S.forgotEmail.trim(), loading: v === "loading" ? "Sending…" : false, cta: true })}
+      ${xlField({ id: "forgotEmail", label: "Work email", type: "email", value: S.forgotEmail, ph: "name@company.com", autocomplete: "username", error: errs[v], readonly: v === "loading", autofocus: true })}
+      ${cta({ type: "submit", label: "Send reset link", disabled: !S.forgotEmail.trim(), loading: v === "loading" ? "Sending…" : false, cta: true })}
     </form>`);
   }
 
@@ -184,15 +246,12 @@
     const v = S.v;
     if (v === "redirecting" || v === "waiting") {
       const org = orgFrom(S.ssoId);
-      const row = (st, icn, t) => `<div class="row is-${st}">${st === "now" ? ic("loader-circle", "rv-spin") : ic(icn)}${t}</div>`;
+      const row = (st, t) => `<div class="row is-${st}">${st === "now" ? ic("loader-circle", "rv-spin") : st === "done" ? ic("circle-check") : ic("circle-dot")}${t}</div>`;
       return authLayout(S, `<div class="auth__box">
-        <div class="auth__head"><h1>Signing in with ${esc(org)}</h1><p>Finish on your organization's page. You'll return here automatically.</p></div>
-        <div class="auth__redirect" aria-live="polite">
-          ${row("done", "circle-check", "Organization found")}
-          ${row(v === "redirecting" ? "now" : "done", "circle-check", "Redirecting to your identity provider")}
-          ${row(v === "waiting" ? "now" : "next", "circle-dot", "Waiting for confirmation")}
-        </div>
-        ${btn({ v: "secondary", size: "lg", block: true, label: "Cancel", act: "cancelSso" })}
+        <div class="auth__head"><div class="auth__mark is-orange">${ic("building-2")}</div><h1>Signing in with ${esc(org)}.</h1><p>Finish on your organization's page. You'll return here automatically.</p></div>
+        <div class="auth__redirect" aria-live="polite">${row("done", "Organization found")}${row(v === "redirecting" ? "now" : "done", "Redirecting to your identity provider")}${row(v === "waiting" ? "now" : "next", "Waiting for confirmation")}</div>
+        <div class="rv-progress is-indeterminate"><i></i></div>
+        ${btn({ v: "glass", size: "xl", block: true, label: "Cancel", act: "cancelSso" })}
       </div>`);
     }
     const notes = {
@@ -200,10 +259,10 @@
       denied: note("error", "shield-alert", "Your organization didn't confirm the sign-in.", "Try again, or ask your administrator to check your access."),
     };
     return authLayout(S, `<form class="auth__box" data-form="sso" novalidate>
-      <div class="auth__head">${back()}<h1>Sign in with your organization</h1><p>Use your company's single sign-on.</p></div>
+      <div class="auth__head">${back()}<h1>Sign in with your organization.</h1><p>Use your company's single sign-on.</p></div>
       ${notes[v] || ""}
-      ${field({ id: "ssoId", label: "Work email or organization ID", value: S.ssoId, ph: "name@company.com", autocomplete: "username", error: v === "invalid" ? "Enter a work email or an organization ID, like spice-trail." : "", readonly: v === "loading", autofocus: true })}
-      ${btn({ v: "primary", size: "lg", block: true, type: "submit", label: "Continue", iconR: "arrow-right", disabled: !S.ssoId.trim(), loading: v === "loading" ? "Finding your organization…" : false, cta: true })}
+      ${xlField({ id: "ssoId", label: "Work email or organization ID", value: S.ssoId, ph: "name@company.com", autocomplete: "username", error: v === "invalid" ? "Enter a work email or an organization ID, like spice-trail." : "", readonly: v === "loading", autofocus: true })}
+      ${cta({ type: "submit", label: "Continue", disabled: !S.ssoId.trim(), loading: v === "loading" ? "Finding your organization…" : false, cta: true })}
     </form>`);
   }
 
@@ -216,9 +275,9 @@
     const v = S.v;
     if (v === "methods") {
       return authLayout(S, `<div class="auth__box">
-        <div class="auth__head">${back("mfa/default", "Back")}<h1>Use another method</h1><p>Choose where to get your verification code.</p></div>
+        <div class="auth__head">${back("mfa/default", "Back")}<h1>Use another method.</h1><p>Choose where to get your verification code.</p></div>
         <div class="methods" role="radiogroup" aria-label="Verification method">${Object.entries(METHODS).map(([k, m]) => `<button type="button" class="method ${S.mfaPick === k ? "is-selected" : ""}" role="radio" aria-checked="${S.mfaPick === k}" data-method="${k}"><span class="ic">${ic(m.icon)}</span><span><span class="tt">${m.t}</span><span class="sub">${m.sub}</span></span>${S.mfaPick === k ? ic("circle-check") : ic("chevron-right")}</button>`).join("")}</div>
-        ${btn({ v: "primary", size: "lg", block: true, label: "Continue", act: "sendMethod" })}
+        ${cta({ label: "Continue", act: "sendMethod" })}
       </div>`);
     }
     const m = METHODS[S.mfaMethod];
@@ -233,27 +292,19 @@
     }[v] || "";
     const cd = remaining(S, "mfaResend");
     return authLayout(S, `<form class="auth__box" data-form="mfa" novalidate>
-      <div class="auth__head">${back()}<h1>Verify your identity</h1><p>Enter the 6-digit verification code.</p></div>
+      <div class="auth__head">${back()}<div class="auth__mark ${v === "success" ? "is-success" : "is-orange"}">${ic(v === "success" ? "circle-check" : "shield-check")}</div><h1>Verify your identity.</h1><p>Enter the 6-digit verification code.</p></div>
       <div><span class="auth__chip">${ic(m.icon)}${m.chip}</span></div>
-      <div style="display:grid;gap:12px">
+      <div class="auth__otp">
         ${otp(S.otp, { state, disabled: stopped || v === "expired", showActive: STATIC && !stopped && !state, autofocusIndex: stopped ? -1 : fi === -1 ? 5 : fi })}
         ${msg}
-        ${stopped ? "" : `<div class="auth__meta"><span>${v === "expired" ? "Code expired" : `Expires in <span class="t">${timer(S, "mfaExpire")}</span>`}</span>${cd > 0 ? `<span>Resend code in <span class="t">${timer(S, "mfaResend")}</span></span>` : btn({ v: "link", label: "Resend code", act: "resendOtp" })}</div>`}
+        ${stopped ? "" : `<div class="auth__meta-row"><span>${v === "expired" ? "Code expired" : `Expires in <span class="t">${timer(S, "mfaExpire")}</span>`}</span>${cd > 0 ? `<span>Resend code in <span class="t">${timer(S, "mfaResend")}</span></span>` : btn({ v: "link", label: "Resend code", act: "resendOtp" })}</div>`}
       </div>
-      <div class="auth__actions">
-        ${v === "expired" ? btn({ v: "primary", size: "lg", block: true, label: "Send new code", act: "resendOtp" }) : btn({ v: "primary", size: "lg", block: true, type: "submit", label: "Verify", disabled: !S.otp.every(Boolean) || stopped, loading: v === "verifying" ? "Verifying…" : false, cta: true })}
-        ${btn({ v: "text", label: "Use another method", go: "mfa/methods", disabled: stopped, cls: "", attrs: 'style="justify-self:center"' })}
-      </div>
+      ${v === "expired" ? cta({ label: "Send new code", act: "resendOtp", arrow: false }) : cta({ type: "submit", label: "Verify", disabled: !S.otp.every(Boolean) || stopped, loading: v === "verifying" ? "Verifying…" : false, cta: true })}
+      ${btn({ v: "text", label: "Use another method", go: "mfa/methods", disabled: stopped, attrs: 'style="justify-self:center"' })}
     </form>`);
   }
 
   /* ---------- POS terminal: PIN + device binding ---------- */
-  function termBar(S, ctx) {
-    return `<header class="term__bar">${logo()}<span class="term__sep"></span>
-      <span class="term__ctx">${ic("monitor")}<b>${ctx || TERMINAL}</b><span>· Downtown Delhi</span></span>
-      <div class="term__right"><span class="term__clock">7:42<small>PM</small></span>${conn(S.network === "offline" ? "offline" : "online")}</div></header>`;
-  }
-
   function pinScreen(S) {
     const v = S.v, u = STAFF[S.user];
     const lockedOut = ["too-many", "locked", "unauthorized"].includes(v);
@@ -265,21 +316,20 @@
       "too-many": ["is-warning", "timer", "PIN entry paused"],
       locked: ["is-error", "lock-keyhole", "PIN locked"],
       unauthorized: ["is-error", "shield-alert", "Device not authorized"],
-    }[v] || ["", S.network === "offline" ? "wifi-off" : "", S.network === "offline" ? "Offline · PIN is checked on this device" : ""];
+    }[v] || ["", S.network === "offline" ? "wifi-off" : "", S.network === "offline" ? "Offline · PIN is checked on this device" : "4-digit PIN"];
     let pad;
-    if (v === "too-many") pad = `<div class="pinbox__lock">${ic("timer")}<h2>Too many attempts</h2><div class="big">${timer(S, "pinLock")}</div><p>Try again when the timer ends, or ask a manager to unlock your PIN.</p><div class="acts">${btn({ v: "secondary", size: "touch", block: true, label: "Switch user", act: "switchUser" })}</div></div>`;
-    else if (v === "locked") pad = `<div class="pinbox__lock"><div class="auth__mark is-error" style="margin:0">${ic("lock-keyhole")}</div><h2>Your PIN is locked</h2><p>Ask a manager or administrator to reset your PIN.</p><div class="acts">${btn({ v: "secondary", size: "touch", block: true, label: "Switch user", act: "switchUser" })}${btn({ v: "text", label: "Sign in with email", go: "login/default", attrs: 'style="justify-self:center;margin-top:4px"' })}</div></div>`;
-    else if (v === "unauthorized") pad = `<div class="pinbox__lock"><div class="auth__mark is-error" style="margin:0">${ic("shield-alert")}</div><h2>This device isn't authorized</h2><p>Rasova POS only runs on devices approved for this outlet.</p><div class="acts">${btn({ v: "primary", size: "touch", block: true, label: "Authorize this device", go: "device/start" })}</div></div>`;
+    if (v === "too-many") pad = `<div class="pinbox__lock">${ic("timer")}<h2>Too many attempts</h2><div class="big">${timer(S, "pinLock")}</div><p>Try again when the timer ends, or ask a manager to unlock your PIN.</p>${btn({ v: "glass", size: "touch", block: true, label: "Switch user", act: "switchUser" })}</div>`;
+    else if (v === "locked") pad = `<div class="pinbox__lock"><div class="auth__mark is-error">${ic("lock-keyhole")}</div><h2>Your PIN is locked</h2><p>Ask a manager or administrator to reset your PIN.</p>${btn({ v: "glass", size: "touch", block: true, label: "Switch user", act: "switchUser" })}${btn({ v: "text", label: "Sign in with email", go: "login/default", attrs: 'style="justify-self:center"' })}</div>`;
+    else if (v === "unauthorized") pad = `<div class="pinbox__lock"><div class="auth__mark is-error">${ic("shield-alert")}</div><h2>This device isn't authorized</h2><p>Rasova POS only runs on devices approved for this outlet.</p>${cta({ label: "Authorize this device", go: "device/start" })}</div>`;
     else pad = keypad(v === "success" || v === "verifying", S.pressed);
-    return `<div class="term">${termBar(S)}
-      <main class="term__main"><div class="pinbox">
+    return authLayout(S, `<div class="pinbox">
         <div class="shift" role="radiogroup" aria-label="Staff on shift">${STAFF.map((s, i) => `<button type="button" role="radio" aria-checked="${i === S.user}" class="${i === S.user ? "is-selected" : ""}" data-user="${i}"><span class="rv-avatar">${s.i}</span>${s.n.split(" ")[0]}</button>`).join("")}</div>
         <div class="pinbox__head"><h1>Enter your PIN</h1><p>${u.n} · ${u.r}</p></div>
         ${pinDots(4, lockedOut ? 0 : S.pin.length, dotState)}
         <div class="pinbox__msg ${msg[0]}" aria-live="polite">${msg[1] ? ic(msg[1], msg[1] === "loader-circle" ? "rv-spin" : "") : ""}${msg[2]}</div>
         ${pad}
         ${lockedOut ? "" : btn({ v: "text", label: "Sign in with email instead", go: "login/default" })}
-      </div></main></div>`;
+      </div>`, { kind: "terminal", panelCls: "auth__panel--pin" });
   }
 
   function deviceScreen(S) {
@@ -288,29 +338,29 @@
     const kv = (rows) => `<dl class="kv">${rows.map(([k, val, x]) => `<div><dt>${k}</dt><dd${x === "mono" ? ' class="mono"' : ""}>${val}</dd>${x === "copy" ? copy : "<span></span>"}</div>`).join("")}</dl>`;
     let body;
     if (v === "start") body = `
-      <div class="auth__head"><div class="auth__mark">${ic("shield-check")}</div><h1>Secure this device</h1><p>This device needs to be authorized before it can access Rasova POS.</p></div>
-      ${field({ id: "devName", label: "Device name", value: S.devName, autofocus: true })}
-      <div class="rv-field"><span class="rv-label">Outlet</span><div class="rv-input rv-select" role="button" tabindex="0">${ic("store")}<span class="rv-input__value">Downtown Delhi · Connaught Place</span>${ic("chevron-down")}</div></div>
+      <div class="auth__head"><div class="auth__mark">${ic("shield-check")}</div><h1>Secure this device.</h1><p>This device needs to be authorized before it can access Rasova POS.</p></div>
+      ${xlField({ id: "devName", label: "Device name", value: S.devName, autofocus: true })}
+      <div class="rv-field"><span class="rv-label">Outlet</span><div class="rv-input rv-input--xl rv-select" role="button" tabindex="0">${ic("store")}<span class="rv-input__value">Downtown Delhi · Connaught Place</span>${ic("chevron-down")}</div></div>
       ${kv([["Device ID", `<span style="font-family:var(--font-mono)">${DEVICE_ID}</span>`, "copy"], ["Platform", "Windows 11 · Rasova POS 1.0.4"]])}
-      ${btn({ v: "primary", size: "lg", block: true, label: "Request authorization", iconR: "arrow-right", act: "requestDevice", disabled: !S.devName.trim(), cta: true })}`;
+      ${cta({ label: "Request authorization", act: "requestDevice", disabled: !S.devName.trim(), cta: true })}`;
     else if (v === "pending") body = `
-      <div class="auth__head"><div class="auth__mark is-orange">${ic("qr-code")}</div><h1>Waiting for approval</h1><p>Ask an administrator to approve this code in Admin › Devices.</p></div>
+      <div class="auth__head"><div class="auth__mark is-orange">${ic("qr-code")}</div><h1>Waiting for approval.</h1><p>Ask an administrator to approve this code in Admin › Devices.</p></div>
       <div class="pair"><div class="qr">${qr()}</div><div><div class="pair__code" aria-label="Pairing code K7Q 4M2"><span>K</span><span>7</span><span>Q</span><i></i><span>4</span><span>M</span><span>2</span></div><p>Or scan from an administrator's signed-in session. <b>${esc(S.devName)}</b> · Downtown Delhi</p></div></div>
       ${note("orange", "loader-circle", "Waiting for administrator approval", `Code expires in ${timer(S, "deviceCode")}`)}
-      ${btn({ v: "secondary", size: "lg", block: true, label: "Cancel request", go: "device/start" })}`;
+      ${btn({ v: "glass", size: "xl", block: true, label: "Cancel request", go: "device/start", attrs: 'data-dir="back"' })}`;
     else if (v === "paired") body = `
-      <div class="auth__head"><div class="auth__mark is-success">${ic("circle-check")}</div><h1>Device paired</h1><p>${esc(S.devName)} can now be used at Downtown Delhi.</p></div>
+      <div class="auth__head"><div class="auth__mark is-success">${ic("circle-check")}</div><h1>Device paired.</h1><p>${esc(S.devName)} can now be used at Downtown Delhi.</p></div>
       ${kv([["Device ID", DEVICE_ID, "mono"], ["Approved by", "Rohan Das · Outlet manager"], ["Status", badge("success", "Connected", { dot: true })]])}
-      ${btn({ v: "primary", size: "lg", block: true, label: "Continue to PIN login", iconR: "arrow-right", act: "toPin" })}`;
+      ${cta({ label: "Continue to PIN login", act: "toPin" })}`;
     else body = `
-      <div class="auth__head"><div class="auth__mark is-error">${ic("circle-x")}</div><h1>Request rejected</h1><p>An administrator declined this device. Check the outlet, then request again.</p></div>
+      <div class="auth__head"><div class="auth__mark is-error">${ic("circle-x")}</div><h1>Request rejected.</h1><p>An administrator declined this device. Check the outlet, then request again.</p></div>
       ${note("neutral", "message-square-text", "Note from Rohan Das", "This terminal belongs to the Connaught Place outlet, not Downtown Delhi.")}
-      <div class="auth__actions">${btn({ v: "primary", size: "lg", block: true, label: "Request again", go: "device/start" })}${btn({ v: "secondary", size: "lg", block: true, label: "Contact support", act: "help" })}</div>`;
-    return `<div class="term">${termBar(S, "Unpaired device")}<main class="term__main"><div class="devbox">${body}</div></main></div>`;
+      ${cta({ label: "Request again", go: "device/start", arrow: false })}${btn({ v: "glass", size: "xl", block: true, label: "Contact support", act: "help" })}`;
+    return authLayout(S, `<div class="auth__box">${body}</div>`, { kind: "terminal", ctx: "Unpaired device", wide: true });
   }
 
   function transitScreen(S) {
-    return `<div class="transit"><div class="transit__box" role="status">${mark()}<div><h2>${esc(S.transit.title)}</h2><p>${esc(S.transit.sub)}</p></div><div class="rv-progress is-indeterminate"><i></i></div></div></div>`;
+    return authLayout(S, `<div class="transit" role="status">${mark("transit__mark")}<div><h2>${esc(S.transit.title)}</h2><p>${esc(S.transit.sub)}</p></div><div class="rv-progress is-indeterminate"><i></i></div></div>`, { kind: S.via === "pin" ? "terminal" : "web", panelCls: "auth__panel--transit" });
   }
 
   /* ---------- Application shell ---------- */
@@ -506,7 +556,9 @@
     else if (S.nav === "home") page = homePage(S);
     else if (S.nav === "pos") page = posPage(S);
     else page = `<div class="page"><div class="page__head"><div><h1>${NAV_LABEL[S.nav]}</h1><p>${OUTLETS[S.outlet].n} · ${OUTLETS[S.outlet].a}</p></div></div><div class="module-ph"><div class="rv-empty"><span class="rv-empty__icon">${ic("layout-grid")}</span><h4>Designed in the next step</h4><p>${NEXT[S.nav]} reuses this sidebar, navbar and component set.</p>${badge("orange", NEXT[S.nav])}</div></div></div>`;
-    return `<div class="shell ${S.collapsed ? "is-collapsed" : ""}">${sidebar(S)}<div class="main">${navbar(S)}${sysAlert(S.appState)}${page}</div></div>`;
+    if (S.device === "mobile") return authLayout(S, `<div class="auth__box"><div class="auth__head"><div class="auth__mark">${ic("monitor")}</div><h1>Open Rasova on a larger screen.</h1><p>In Phase 1 the workspace runs on Windows desktops and Android POS tablets. You're signed in as ${u.n}.</p></div>${btn({ v: "glass", size: "xl", block: true, label: "Sign out", icon: "log-out", act: "confirmSignout" })}</div>`);
+    const fixed = S.nav === "pos" && !denied;
+    return `<div class="shell ${S.collapsed ? "is-collapsed" : ""}${S.anim === "app-in" ? " is-entering" : ""}"><div class="shell__bg" aria-hidden="true"></div>${sidebar(S)}<div class="main">${navbar(S)}<div class="main__scroll ${fixed ? "is-fixed" : ""}">${sysAlert(S.appState)}${page}</div></div></div>`;
   }
 
   /* ---------- Overlays ---------- */
@@ -543,10 +595,10 @@
   const frameInner = (S) => SCREENS[S.screen](S) + overlay(S);
   const frameHTML = (S) => {
     STATIC = true;
-    try { return `<div class="rv-frame ${S.device === "tablet" ? "is-tablet" : ""}" data-rv-theme="${S.theme}" inert aria-hidden="true">${frameInner(S)}</div>`; }
+    try { return `<div class="rv-frame ${S.device === "tablet" ? "is-tablet" : S.device === "mobile" ? "is-mobile" : ""}" data-rv-theme="${S.theme}" inert aria-hidden="true">${frameInner(S)}</div>`; }
     finally { STATIC = false; }
   };
   const withStatic = (fn) => { STATIC = true; try { return fn(); } finally { STATIC = false; } };
 
-  window.Rasova = { ic, esc, btn, field, note, badge, conn, CONN, otp, pinDots, keypad, logo, mark, qr, navItem, NAV, sidebar, navbar, outletMenu, profileMenu, frameInner, frameHTML, withStatic, posGrid, emailOk, remaining, fmt, orgFrom, STAFF, OUTLETS, MENU, START_CART, DEMO_PIN, METHODS, inr };
+  window.Rasova = { authLayout, ic, esc, btn, field, note, badge, conn, CONN, otp, pinDots, keypad, logo, mark, qr, navItem, NAV, sidebar, navbar, outletMenu, profileMenu, frameInner, frameHTML, withStatic, posGrid, emailOk, remaining, fmt, orgFrom, STAFF, OUTLETS, MENU, START_CART, DEMO_PIN, METHODS, inr };
 })();

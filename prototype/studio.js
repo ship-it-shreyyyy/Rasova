@@ -36,6 +36,7 @@
     { id: "02", g: "POS", items: [["app", "pos", "Order in progress"], ["app", "pos-empty", "New order"], ["app", "pay", "Take payment"], ["app", "paid", "Payment received"]] },
   ];
   const TABLET_SET = [["login", "default", "Login"], ["mfa", "filled", "MFA"], ["pin", "entering", "PIN login"], ["device", "pending", "Device binding"], ["app", "home", "Home, collapsed rail"], ["app", "pos", "POS, touch layout"]];
+  const MOBILE_SET = [["login", "default", "Login"], ["login", "invalid", "Invalid credentials"], ["mfa", "filled", "MFA"], ["pin", "entering", "PIN"]];
   const DARK_SET = [["login", "default", "Login"], ["pin", "entering", "PIN login"], ["app", "home", "Home"], ["app", "pos", "POS"]];
 
   function preset(S, screen, v) {
@@ -92,7 +93,7 @@
   const frame = document.createElement("div");
   stage.appendChild(frame);
   function fit() {
-    const W = S.device === "tablet" ? 1280 : 1440, H = S.device === "tablet" ? 800 : 900;
+    const [W, H] = { desktop: [1440, 900], tablet: [1280, 800], mobile: [390, 844] }[S.device];
     const s = Math.min(1, stage.clientWidth / W);
     frame.style.transform = `scale(${s})`;
     frame.style.left = `${Math.max(0, Math.round((stage.clientWidth - W * s) / 2))}px`;
@@ -101,12 +102,36 @@
   }
   new ResizeObserver(fit).observe(stage);
 
+  // Auth screens share one persistent environment: only the panel layer is
+  // swapped, so the orbit, light and floating cards keep moving.
+  let lastScreen = null, lastWasAuth = false, navDir = null;
+  const isAuthScreen = () => S.screen !== "app" || S.device === "mobile";
   function render(opt = {}) {
     const active = document.activeElement;
     const keepId = opt.focus !== undefined ? opt.focus : frame.contains(active) && active.id ? active.id : null;
-    frame.className = "rv-frame" + (S.device === "tablet" ? " is-tablet" : "");
+    const authNow = isAuthScreen();
+    if (!authNow) S.anim = lastWasAuth ? "app-in" : null;
+    else if (!lastWasAuth || lastScreen === null) S.anim = "intro";
+    else if (S.screen !== lastScreen || opt.swap) S.anim = navDir === "back" ? "swap-back" : "swap";
+    else S.anim = null;
+    frame.className = "rv-frame" + (S.device === "tablet" ? " is-tablet" : S.device === "mobile" ? " is-mobile" : "");
     frame.setAttribute("data-rv-theme", S.theme);
-    frame.innerHTML = R.frameInner(S);
+    const html = R.frameInner(S);
+    const cur = frame.querySelector(":scope > .auth");
+    let swapped = false;
+    if (authNow && cur && S.anim !== "intro") {
+      const tpl = document.createElement("template");
+      tpl.innerHTML = html;
+      const next = tpl.content.querySelector(".auth");
+      if (next && next.dataset.kind === cur.dataset.kind) {
+        cur.querySelector(".auth__ui").replaceWith(next.querySelector(".auth__ui"));
+        frame.querySelectorAll(":scope > :not(.auth)").forEach((n) => n.remove());
+        [...tpl.content.children].filter((n) => n !== next).forEach((n) => frame.appendChild(n));
+        swapped = true;
+      }
+    }
+    if (!swapped) frame.innerHTML = html;
+    lastScreen = S.screen; lastWasAuth = authNow; navDir = null; S.anim = null;
     fit();
     if (booted && currentView === "prototype") {
       const t = (keepId && frame.querySelector("#" + CSS.escape(keepId))) || frame.querySelector(".rv-modal .rv-btn--primary:not(:disabled), .rv-modal .rv-btn") || frame.querySelector("[data-autofocus]:not([disabled])");
@@ -131,7 +156,10 @@
     setTimeout(() => el?.remove(), 2400);
   }
   function signedIn(title, sub) {
-    S.transit = { title, sub }; go("transit", "signin");
+    S.transit = { title, sub };
+    const panel = frame.querySelector(".auth__panel");
+    if (panel && !panel.classList.contains("is-exit")) { panel.classList.add("is-exit"); return later(260, () => signedIn(title, sub)); }
+    go("transit", "signin");
     later(1300, () => {
       S.appState = S.network === "offline" ? "offline" : "online";
       S.collapsed = S.prefCollapsed = S.device === "tablet";
@@ -273,6 +301,7 @@
   };
 
   function goFrom(s, v) {
+    if (s === "login" && S.screen !== "login" && !navDir) navDir = "back";
     if (s === "forgot" && emailOk(S.email) && !S.forgotEmail) S.forgotEmail = S.email;
     if (s === "sso" && !S.ssoId && emailOk(S.email)) S.ssoId = S.email;
     if (s === "login") { S.password = ""; S.showPw = false; if (S.network === "offline") v = "offline"; }
@@ -335,6 +364,7 @@
     const el = e.target.closest("[data-go],[data-act],[data-key],[data-nav],[data-method],[data-user],[data-outlet],[data-add],[data-inc],[data-dec],[data-cat],[data-otype],[data-pay]");
     if (!el || el.disabled) return;
     const d = el.dataset;
+    if (d.dir === "back") navDir = "back";
     if (d.go) { const [s, v] = d.go.split("/"); return goFrom(s, v); }
     if (d.key !== undefined) return A.pinKey(d.key);
     if (d.nav) return A.nav(d.nav);
@@ -349,6 +379,16 @@
     if (d.pay) { S.pay.method = d.pay; return render({ focus: null }); }
     A[d.act]?.(el);
   });
+
+  /* Cursor parallax on the auth environment (depth set per card) */
+  const reduceMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (_) { return false; } };
+  frame.addEventListener("mousemove", (e) => {
+    const a = frame.querySelector(":scope > .auth"); if (!a || reduceMotion()) return;
+    const r = frame.getBoundingClientRect();
+    a.style.setProperty("--px", (((e.clientX - r.left) / r.width - 0.5) * -22).toFixed(1));
+    a.style.setProperty("--py", (((e.clientY - r.top) / r.height - 0.5) * -16).toFixed(1));
+  });
+  frame.addEventListener("mouseleave", () => { const a = frame.querySelector(":scope > .auth"); if (a) { a.style.setProperty("--px", 0); a.style.setProperty("--py", 0); } });
 
   function paintOtp(focusIdx) {
     frame.querySelectorAll("[data-otp]").forEach((c) => { const i = +c.dataset.otp; c.value = S.otp[i]; c.classList.toggle("is-filled", !!S.otp[i]); });
@@ -430,7 +470,7 @@
     const sel = (id, label, opts, val) => `<label class="sel" for="${id}">${label}<select id="${id}">${opts.map(([v, l]) => `<option value="${v}"${v === val ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
     $("#controls").innerHTML = `
       <div class="ctl"><h3>Viewport</h3>
-        <div class="rv-seg" data-ctl="device"><button type="button" data-val="desktop">${ic("monitor")}Desktop</button><button type="button" data-val="tablet">${ic("tablet")}Tablet</button></div>
+        <div class="rv-seg" data-ctl="device"><button type="button" data-val="desktop">${ic("monitor")}Desktop</button><button type="button" data-val="tablet">${ic("tablet")}Tablet</button><button type="button" data-val="mobile">${ic("smartphone")}Mobile</button></div>
         <h3>Network</h3>
         <div class="rv-seg" data-ctl="network"><button type="button" data-val="online">${ic("wifi")}Online</button><button type="button" data-val="offline">${ic("wifi-off")}Offline</button></div>
       </div>
@@ -481,10 +521,11 @@
       const st = preset(Object.assign(base(), { device, theme }), s, v);
       return `<div class="board-card" data-board="${s}/${v}" data-device="${device}" data-theme="${theme}"><div class="board-thumb">${R.frameHTML(st)}</div><div class="board-cap"><span>${l}</span>${btn({ v: "text", label: "Open", iconR: "arrow-right" })}</div></div>`;
     };
-    const group = (id, title, sub, items, device, theme) => `<section class="board-group"><h2><span class="rv-badge rv-badge--orange">${id}</span>${title}<span class="c">${sub}</span></h2><div class="board-grid">${items.map(([s, v, l]) => card(s, v, l, device, theme)).join("")}</div></section>`;
+    const group = (id, title, sub, items, device, theme) => `<section class="board-group"><h2><span class="rv-badge rv-badge--orange">${id}</span>${title}<span class="c">${sub}</span></h2><div class="board-grid ${device === "mobile" ? "is-mobile" : ""}">${items.map(([s, v, l]) => card(s, v, l, device, theme)).join("")}</div></section>`;
     $("#board").innerHTML =
       STATES.map((g) => group(g.id, g.g, `${g.items.length} states`, g.items, "desktop", "light")).join("") +
       group("1280×800", "Tablet and Android POS", "Touch layout, not a scaled desktop", TABLET_SET, "tablet", "light") +
+      group("390×844", "Mobile sign-in", "Logo and form only; the visualization is dropped", MOBILE_SET, "mobile", "light") +
       group("DARK", "Dark theme variant", "Same components, dark tokens", DARK_SET, "desktop", "dark");
     scaleThumbs();
   }
@@ -495,7 +536,7 @@
     setView("prototype"); jump(s, v); window.scrollTo({ top: 0 });
   });
   function scaleThumbs() {
-    document.querySelectorAll(".board-thumb").forEach((t) => { const f = t.firstElementChild; if (f) t.style.setProperty("--thumb-scale", String(t.clientWidth / (f.classList.contains("is-tablet") ? 1280 : 1440))); });
+    document.querySelectorAll(".board-thumb").forEach((t) => { const f = t.firstElementChild; if (f) t.style.setProperty("--thumb-scale", String(t.clientWidth / (f.classList.contains("is-tablet") ? 1280 : f.classList.contains("is-mobile") ? 390 : 1440))); });
   }
   new ResizeObserver(() => scaleThumbs()).observe(document.body);
 
@@ -537,10 +578,35 @@
           ${spec("Radius", "", `<div class="radii">${[[4, "Badges"], [6, "Small controls"], [8, "Buttons, inputs"], [10, "Cards"], [14, "Modals, drawers"]].map(([r, l]) => `<div class="radius-s" style="border-radius:${r}px"><b>${r}px</b>${l}</div>`).join("")}</div>`)}
           ${spec("Elevation", "very subtle", `<div class="elev">${[["xs", "Cards"], ["sm", "Selected seg"], ["md", "Tooltips"], ["lg", "Menus, modals"]].map(([k, l]) => `<div class="elev-s" style="box-shadow:var(--shadow-${k})"><b>shadow-${k}</b>${l}</div>`).join("")}</div>`)}
         </div>`)}
+        ${sec("Glass and motion", "Glass is an accent for navigation, floating controls, menus and decorative cards. Data stays on solid white.", `
+          <div class="glass-stage">
+            <div class="glass-stage__bg"></div>
+            <div class="rv-glass glass-demo"><div class="fcard__k"><i class="fdot"></i>Table</div><div class="fcard__v">12</div><div class="fcard__s">Glass · 65% · blur 20</div></div>
+            <div class="rv-glass rv-glass--strong glass-demo"><div class="fcard__k">Auth panel</div><div class="fcard__v" style="font-size:20px">Strong glass</div><div class="fcard__s">78% · blur 20 · 20px radius</div></div>
+            <div class="rv-glass rv-glass--dark glass-demo glass-demo--pill"><i class="fdot fdot--ok"></i>Synced<span>Dark glass</span></div>
+            <span class="rv-tooltip">Glass tooltip <kbd>N</kbd></span>
+            <div class="rv-menu" style="width:200px"><button type="button" class="rv-menu__item is-selected">Downtown Delhi${ic("check")}</button><button type="button" class="rv-menu__item">Gurugram</button></div>
+          </div>
+          <div class="dodont"><div class="do"><h3>Glass</h3><ul><li>Sidebar and navbar</li><li>Auth panel and floating operational cards</li><li>Menus, dropdowns, tooltips, the outlet selector</li><li>Small status chips over the ambient background</li></ul></div>
+          <div><h3>Solid</h3><ul><li>Cards, tables and KPI tiles</li><li>In-app forms, drawers and the POS order panel</li><li>Anything people read for more than a glance</li></ul></div></div>
+          <div class="table-wrap"><table class="rv-table motion-table"><thead><tr><th>Motion</th><th>Value</th><th>Use</th><th>Try it</th></tr></thead><tbody>
+            <tr><td class="mono">--t-fast</td><td>150ms</td><td class="sub">Hover color, link underline</td><td>${btn({ v: "link", label: "Forgot password?" })}</td></tr>
+            <tr><td class="mono">--t-med</td><td>200ms</td><td class="sub">Focus ring, nav shift, label shift</td><td><div style="width:220px">${R.withStatic(() => field({ id: "m1", label: "Work email", ph: "Click to focus", size: "xl" }))}</div></td></tr>
+            <tr><td class="mono">--t-slow</td><td>250ms</td><td class="sub">Menus, arrow nudge, tooltips</td><td>${btn({ v: "primary", label: `Sign in<span class="arr">${ic("arrow-right")}</span>` })}</td></tr>
+            <tr><td class="mono">--t-enter</td><td>600ms + stagger</td><td class="sub">Page load: logo, cards, panel, fields (≈1.1s)</td><td><div class="inline"><div class="stagger-demo is-on" id="staggerDemo"><i></i><i></i><i></i><i></i></div>${btn({ v: "text", label: "Replay", icon: "rotate-ccw", attrs: 'id="replayStagger"' })}</div></td></tr>
+            <tr><td class="mono">anim-float</td><td>4.5–6.5s · ±6px</td><td class="sub">Floating cards, each on its own timing</td><td><div class="rv-glass glass-mini anim-float" style="--dur:5s">₹2,840</div></td></tr>
+            <tr><td class="mono">orbit</td><td>54–120s per lap</td><td class="sub">Data nodes on the sign-in orbit</td><td><svg class="orbit-mini" viewBox="0 0 120 60" aria-hidden="true"><ellipse cx="60" cy="30" rx="54" ry="24" fill="none" stroke="var(--orbit)" stroke-dasharray="1 5"/><circle r="3.5" fill="#FF6A00"><animateMotion dur="8s" repeatCount="indefinite" path="M60 6 A54 24 0 1 1 60 54 A54 24 0 1 1 60 6"/></circle></svg></td></tr>
+            <tr><td class="mono">reduced</td><td>prefers-reduced-motion</td><td class="sub">Floating, drift, parallax and orbit stop; entrances become plain fades</td><td class="sub">Automatic</td></tr>
+          </tbody></table></div>`)}
         ${sec("Iconography", "Lucide, 1.75 stroke, 16–18px in UI, 24px on the keypad. Black by default, orange only when active.", `<div class="icon-grid">${icons.map((n, i) => `<div class="icon-cell ${i === 0 ? "is-accent" : ""}">${ic(n)}<span>${n}</span></div>`).join("")}</div>`)}
         ${sec("Product structure", "Mirrors the Figma page order", `<div class="sections-map">${sections.map(([n, t, s]) => `<div class="${s === "now" ? "is-now" : ""}"><b>${n}</b><span>${t}</span>${s === "now" ? badge("orange", "This step") : s === "part" ? badge("neutral", "Connectivity + auth") : ""}</div>`).join("")}</div>`)}
       </div>`;
   }
+
+  document.getElementById("foundations").addEventListener("click", (e) => {
+    if (!e.target.closest("#replayStagger")) return;
+    const d = document.getElementById("staggerDemo"); d.classList.remove("is-on"); void d.offsetWidth; d.classList.add("is-on");
+  });
 
   /* ---------- Components ---------- */
   function buildComponents() {
@@ -561,11 +627,13 @@
       <div class="sheet-intro"><span class="rv-badge rv-badge--orange">00</span><h1>Components</h1><p>Every Phase 1 component with its states. The shell, POS and authentication screens are built only from these. Switch the theme at the top to see the dark variant.</p></div>
       <div class="sheet">
         ${sec("Buttons", "8px radius · 40 default, 44 auth, 56 touch · black text on orange (7.2:1)", `<div class="table-wrap"><table class="rv-table spec-table"><thead><tr><th>Variant</th><th>Default</th><th>Hover</th><th>Focus</th><th>Disabled</th><th>Loading</th></tr></thead><tbody>
-          ${bRow("Primary", "orange · one per view", "primary")}${bRow("Secondary", "white · dark border", "secondary")}${bRow("Black", "weighty secondary", "black")}${bRow("Ghost", "transparent", "ghost")}${bRow("Destructive", "light red · red text", "danger")}
+          ${bRow("Primary", "orange · one per view", "primary")}${bRow("Secondary", "white · dark border", "secondary")}${bRow("Black", "weighty secondary", "black")}${bRow("Glass", "auth and floating surfaces", "glass")}${bRow("Ghost", "transparent", "ghost")}${bRow("Destructive", "light red · red text", "danger")}
           </tbody></table></div>
-          <div class="spec-grid">${spec("Sizes", "32 · 40 · 44 · 56", `<div class="inline">${btn({ v: "primary", size: "sm", label: "Small" })}${btn({ v: "primary", label: "Default" })}${btn({ v: "primary", size: "lg", label: "Large" })}${btn({ v: "primary", size: "touch", label: "Touch" })}</div>`)}
+          <div class="spec-grid">${spec("Sizes", "32 · 40 · 44 · 54 · 56", `<div class="inline">${btn({ v: "primary", size: "sm", label: "Small" })}${btn({ v: "primary", label: "Default" })}${btn({ v: "primary", size: "lg", label: "Large" })}${btn({ v: "primary", size: "touch", label: "Touch" })}</div>`)}
+          ${spec("Auth CTA", "54px · arrow moves 5px on hover", `<div class="stack">${btn({ v: "primary", size: "xl", block: true, label: `Sign in<span class="arr">${ic("arrow-right")}</span>` })}${btn({ v: "primary", size: "xl", block: true, cls: "is-hover", label: `Sign in<span class="arr">${ic("arrow-right")}</span>` })}${btn({ v: "primary", size: "xl", block: true, label: "Sign in", loading: "Signing in…" })}</div>`)}
           ${spec("Icon and text buttons", "", `<div class="inline">${btn({ v: "icon", icon: "bell", aria: "Notifications" })}${btn({ v: "icon", icon: "circle-help", aria: "Help", cls: "is-hover" })}${btn({ v: "secondary", label: "Retry sync", icon: "refresh-cw" })}${btn({ v: "link", label: "Forgot password?" })}${btn({ v: "text", label: "Back", icon: "arrow-left" })}</div>`)}</div>`)}
         ${sec("Inputs and dropdowns", "White · 1px border · 8px radius · orange border and ring on focus", `<div class="spec-grid">
+          ${spec("Auth input", "54px · 12px radius · glass fill", st(field({ id: "a", label: "Work email", ph: "name@company.com", size: "xl" })) + st(field({ id: "a", label: "Password", type: "password", value: "tandoor@2026", size: "xl", state: "focus", action: `<button type="button" class="rv-input__action" aria-label="Show password">${ic("eye")}</button>` })))}
           ${spec("Default", "", st(field({ id: "a", label: "Work email", ph: "name@company.com" })))}
           ${spec("Focus", "", st(field({ id: "a", label: "Work email", ph: "name@company.com", state: "focus" })))}
           ${spec("Filled", "", st(field({ id: "a", label: "Work email", value: E })))}

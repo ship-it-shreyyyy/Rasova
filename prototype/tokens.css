@@ -15,22 +15,22 @@
   --surface: #FFFFFF;       /* cards, forms, sidebar, navbar */
   --surface-2: #F2F1ED;     /* secondary surface, wells, hover */
   --surface-3: #EAE8E3;     /* pressed, selected neutral */
-  --border: #E5E3DE;        /* default 1px border */
+  --border: #E7E4DE;        /* default 1px border */
   --border-strong: #D6D3CC; /* hover, input edge */
   --sidebar-border: #E8E6E1;
 
   /* Ink */
   --ink: #171717;           /* primary text, icons, headings */
   --ink-2: #666666;         /* secondary text */
-  --ink-3: #929292;         /* muted, metadata, placeholder */
+  --ink-3: #8A8A8A;         /* muted, metadata, placeholder */
   --ink-inverse: #FFFFFF;
-  --black: #171717;         /* black UI: secondary actions, tooltips */
+  --black: #111111;         /* black UI: secondary actions, tooltips */
   --black-hover: #2A2A2A;
 
   /* Signature orange */
   --orange: #FF6A00;        /* CTA, active, focus, progress */
   --orange-hover: #E85F00;
-  --orange-soft: #FFF0E5;   /* active nav, selected rows */
+  --orange-soft: #FFF0E6;   /* active nav, selected rows */
   --orange-soft-2: #FFE2CC; /* selected hover, strong tint */
   --orange-ink: #B34A00;    /* orange as text on light (5.4:1) */
   --on-orange: #171717;     /* text on orange (7.2:1); white fails */
@@ -47,7 +47,27 @@
   --shadow-sm: 0 1px 2px rgba(23, 23, 23, 0.04), 0 2px 6px rgba(23, 23, 23, 0.04);
   --shadow-md: 0 4px 12px rgba(23, 23, 23, 0.06), 0 1px 3px rgba(23, 23, 23, 0.05);
   --shadow-lg: 0 16px 40px rgba(23, 23, 23, 0.12), 0 2px 6px rgba(23, 23, 23, 0.06);
-  --scrim: rgba(23, 23, 23, 0.32);
+  --scrim: rgba(17, 17, 17, 0.28);
+
+  /* Glass: an accent for navigation, floating controls, menus and
+     decorative cards. Data-heavy surfaces stay solid white. */
+  --glass: rgba(255, 255, 255, 0.65);
+  --glass-strong: rgba(255, 255, 255, 0.78);
+  --glass-menu: rgba(255, 255, 255, 0.9);     /* menus sit over text, so they stay more opaque */
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-edge: rgba(23, 23, 23, 0.06);     /* hairline that keeps glass legible on light */
+  --glass-blur: 20px;
+  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 12px 40px rgba(17, 17, 17, 0.07), 0 2px 6px rgba(17, 17, 17, 0.04);
+  --glass-dark: rgba(20, 20, 20, 0.78);
+  --glass-dark-border: rgba(255, 255, 255, 0.1);
+  --glass-dark-ink: #F5F5F5;
+
+  /* Ambient canvas */
+  --grid-line: rgba(30, 30, 30, 0.035);
+  --atmos-1: rgba(255, 106, 0, 0.10);
+  --atmos-2: rgba(255, 106, 0, 0.06);
+  --orbit: rgba(255, 106, 0, 0.22);
+  --orbit-muted: rgba(23, 23, 23, 0.07);
 
   /* Type */
   --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -79,23 +99,27 @@
   --h-sm: 32px; --h-md: 40px; --h-lg: 44px; --h-touch: 56px; --h-key: 72px;
   --sidebar-w: 248px; --sidebar-w-collapsed: 76px; --navbar-h: 64px;
 
-  /* Motion */
+  /* Motion: UI 150–250ms, ambient 4–8s (orbits slower) */
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --t-fast: 120ms; --t-med: 200ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-float: cubic-bezier(0.45, 0, 0.55, 1);
+  --t-fast: 150ms; --t-med: 200ms; --t-slow: 250ms;
+  --t-enter: 600ms;
+  --float-dist: 6px;
 }
 
 [data-rv-theme="dark"] {
   color-scheme: dark;
-  --bg: #0B0B0B;
-  --surface: #141414;
-  --surface-2: #1B1B1B;
-  --surface-3: #232323;
-  --border: #292929;
-  --border-strong: #363636;
-  --sidebar-border: #292929;
+  --bg: #090909;
+  --surface: #111111;
+  --surface-2: #171717;
+  --surface-3: #222222;
+  --border: #222222;
+  --border-strong: #2E2E2E;
+  --sidebar-border: #222222;
   --ink: #F5F5F5;
-  --ink-2: #B5B5B5;
-  --ink-3: #999999;
+  --ink-2: #B0B0B0;
+  --ink-3: #8A8A8A;
   --ink-inverse: #111111;
   --black: #F5F5F5;          /* "black" UI inverts to light ink in dark */
   --black-hover: #FFFFFF;
@@ -115,8 +139,22 @@
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.7);
   --scrim: rgba(0, 0, 0, 0.6);
+  --glass: rgba(23, 23, 23, 0.6);
+  --glass-strong: rgba(20, 20, 20, 0.74);
+  --glass-menu: rgba(26, 26, 26, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.06);
+  --glass-blur: 26px;
+  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 16px 48px rgba(0, 0, 0, 0.55);
+  --glass-dark: rgba(34, 34, 34, 0.8);
+  --glass-dark-border: rgba(255, 255, 255, 0.1);
+  --grid-line: rgba(255, 255, 255, 0.035);
+  --atmos-1: rgba(255, 106, 0, 0.14);
+  --atmos-2: rgba(255, 106, 0, 0.07);
+  --orbit: rgba(255, 106, 0, 0.3);
+  --orbit-muted: rgba(255, 255, 255, 0.06);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root { --t-fast: 0ms; --t-med: 0ms; }
+  :root { --t-fast: 0ms; --t-med: 0ms; --t-slow: 0ms; --float-dist: 0px; }
 }
